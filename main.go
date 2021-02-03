@@ -99,15 +99,15 @@ func run() error {
 	spec := &specs.Spec{
 		Process: &specs.Process{
 			Args: args,
-			Env:  []string{
+			Env: []string{
 				"HOME=/",
 				"PATH=/usr/local/bin:/usr/bin:/bin",
-				"USER="+u.Username,
+				"USER=" + u.Username,
 			},
 			Cwd: wd,
 			User: specs.User{
-				UID: uint32(uid),
-				GID: uint32(gid),
+				UID:      uint32(uid),
+				GID:      uint32(gid),
 				Username: u.Username,
 			},
 			Capabilities: nil, // none!
@@ -122,13 +122,13 @@ func run() error {
 			resolvedMount(wd),
 
 			// Important libraries.
-			resolvedMount("/lib64/ld-linux-x86-64.so.2"), // dynamic linker.
-			resolvedMount("/lib/x86_64-linux-gnu/libc.so.6"), // libc.
+			resolvedMount("/lib64/ld-linux-x86-64.so.2"),           // dynamic linker.
+			resolvedMount("/lib/x86_64-linux-gnu/libc.so.6"),       // libc.
 			resolvedMount("/lib/x86_64-linux-gnu/libpthread.so.0"), // libpthread.
 
 			resolvedMount("/usr/grte/v4/lib64/ld-linux-x86-64.so.2"), // dynamic linker.
-			resolvedMount("/usr/grte/v4/lib64/libc.so.6"), // libc.
-			resolvedMount("/usr/grte/v4/lib64/libpthread.so.0"), // libpthread.
+			resolvedMount("/usr/grte/v4/lib64/libc.so.6"),            // libc.
+			resolvedMount("/usr/grte/v4/lib64/libpthread.so.0"),      // libpthread.
 		},
 	}
 
