@@ -125,7 +125,7 @@ func run() error {
 		Process: &specs.Process{
 			Args: args,
 			Env: []string{
-				"HOME=/",
+				"HOME=/tmp",
 				"PATH=/usr/local/bin:/usr/bin:/bin",
 				"USER=" + username,
 			},
