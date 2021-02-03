@@ -33,7 +33,8 @@ import (
 var (
 	runscBin = flag.String("runsc", "", "Path to runsc binary")
 
-	extraDirs = flag.String("extra_dirs", "", "Comma-separated list of extra directories to provide read-only access to")
+	extraEnv  = flag.String("extra_env", "", "Comma-separated list of environment variables to set")
+	extraDirs = flag.String("extra_dirs", "", "Comma-separated list of extra directories (or files) to provide read-only access to")
 )
 
 func run() error {
@@ -135,6 +136,13 @@ func run() error {
 			resolvedMount("/usr/grte/v4/lib64/libc.so.6"),            // libc.
 			resolvedMount("/usr/grte/v4/lib64/libpthread.so.0"),      // libpthread.
 		},
+	}
+
+	if *extraEnv != "" {
+		env := strings.Split(*extraEnv, ",")
+		for _, e := range env {
+			spec.Process.Env = append(spec.Process.Env, e)
+		}
 	}
 
 	if *extraDirs != "" {
