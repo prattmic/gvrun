@@ -97,9 +97,12 @@ func run() error {
 
 			// Important libraries.
 			resolvedMount("/lib64/ld-linux-x86-64.so.2"), // dynamic linker.
-			resolvedMount("/usr/grte/v4/lib64/ld-linux-x86-64.so.2"), // dynamic linker.
 			resolvedMount("/lib/x86_64-linux-gnu/libc.so.6"), // libc.
 			resolvedMount("/lib/x86_64-linux-gnu/libpthread.so.0"), // libpthread.
+
+			resolvedMount("/usr/grte/v4/lib64/ld-linux-x86-64.so.2"), // dynamic linker.
+			resolvedMount("/usr/grte/v4/lib64/libc.so.6"), // libc.
+			resolvedMount("/usr/grte/v4/lib64/libpthread.so.0"), // libpthread.
 		},
 	}
 
