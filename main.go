@@ -22,7 +22,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
+	"strconv"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -75,15 +77,39 @@ func run() error {
 
 	// TODO(prattmic): ask for user confirmation for above access?
 
+	// We pretend to be the current host user. This simplifies file access
+	// (files are often accessible only by this user), but we should
+	// consider locking this down more.
+	u, err := user.Current()
+	if err != nil {
+		return fmt.Errorf("error determining current user: %v", err)
+	}
+
+	// user.User.Uid as a string is the most ridiculous API I've seen in
+	// quite a while.
+	uid, err := strconv.ParseUint(u.Uid, 10, 32)
+	if err != nil {
+		return fmt.Errorf("error converting UID %q to uint32: %v", err)
+	}
+	gid, err := strconv.ParseUint(u.Gid, 10, 32)
+	if err != nil {
+		return fmt.Errorf("error converting UID %q to uint32: %v", err)
+	}
+
 	spec := &specs.Spec{
 		Process: &specs.Process{
 			Args: args,
 			Env:  []string{
 				"HOME=/",
 				"PATH=/usr/local/bin:/usr/bin:/bin",
-				"USER=root",
+				"USER="+u.Username,
 			},
 			Cwd: wd,
+			User: specs.User{
+				UID: uint32(uid),
+				GID: uint32(gid),
+				Username: u.Username,
+			},
 			Capabilities: nil, // none!
 		},
 		Hostname: "runsc-gvrun",
@@ -110,7 +136,8 @@ func run() error {
 		return fmt.Errorf("error writing config.json: %v", err)
 	}
 
-	cmd := exec.Command(*runscBin)
+	// runsc must run as root.
+	cmd := exec.Command("sudo", *runscBin)
 	// Write to in-memory overlayfs, not host.
 	cmd.Args = append(cmd.Args, "--overlay")
 	// No networking.
