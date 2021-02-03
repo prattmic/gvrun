@@ -117,8 +117,9 @@ func run() error {
 	cmd.Args = append(cmd.Args, "--network=none")
 
 	// Debugging.
-	cmd.Args = append(cmd.Args, "-debug")
-	cmd.Args = append(cmd.Args, "-debug-log=/tmp/")
+	// cmd.Args = append(cmd.Args, "--strace")
+	// cmd.Args = append(cmd.Args, "--debug")
+	// cmd.Args = append(cmd.Args, "--debug-log=/tmp/")
 
 	cmd.Args = append(cmd.Args, "run")
 	// Spec location.
