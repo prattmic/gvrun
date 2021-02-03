@@ -243,11 +243,11 @@ func main() {
 	flag.Parse()
 
 	if len(flag.Args()) == 0 {
-		log.Fatal("Program to run required!")
+		log.Fatalf("usage: sudo %s -runsc program args...", os.Args[0])
 	}
 
 	if *runscBin == "" {
-		log.Fatal("Path to runsc required via -runsc")
+		log.Fatalf("usage: sudo %s -runsc program args...", os.Args[0])
 	}
 
 	if err := run(); err != nil {
