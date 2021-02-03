@@ -22,10 +22,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -36,6 +36,36 @@ var (
 	extraEnv  = flag.String("extra_env", "", "Comma-separated list of environment variables to set")
 	extraDirs = flag.String("extra_dirs", "", "Comma-separated list of extra directories (or files) to provide read-only access to")
 )
+
+// originalUser return the uid, gid, and username of the user that invoked this
+// binary. Note that this must be invoked under sudo, so this is the user
+// invoking sudo, not root.
+func originalUser() (uint32, uint32, string, error) {
+	uidString, ok := os.LookupEnv("SUDO_UID")
+	if !ok {
+		return 0, 0, "", fmt.Errorf("unable to determine original uid; did you run under sudo?")
+	}
+	uid, err := strconv.ParseUint(uidString, 10, 32)
+	if err != nil {
+		return 0, 0, "", fmt.Errorf("error converting %q to uint32: %v", uidString, err)
+	}
+
+	gidString, ok := os.LookupEnv("SUDO_GID")
+	if !ok {
+		return 0, 0, "", fmt.Errorf("unable to determine original gid; did you run under sudo?")
+	}
+	gid, err := strconv.ParseUint(gidString, 10, 32)
+	if err != nil {
+		return 0, 0, "", fmt.Errorf("error converting %q to uint32: %v", gidString, err)
+	}
+
+	name, ok := os.LookupEnv("SUDO_USER")
+	if !ok {
+		return 0, 0, "", fmt.Errorf("unable to determine original username; did you run under sudo?")
+	}
+
+	return uint32(uid), uint32(gid), name, nil
+}
 
 func run() error {
 	// We need a temporary directory for two reasons:
@@ -86,20 +116,9 @@ func run() error {
 	// We pretend to be the current host user. This simplifies file access
 	// (files are often accessible only by this user), but we should
 	// consider locking this down more.
-	u, err := user.Current()
+	uid, gid, username, err := originalUser()
 	if err != nil {
-		return fmt.Errorf("error determining current user: %v", err)
-	}
-
-	// user.User.Uid as a string is the most ridiculous API I've seen in
-	// quite a while.
-	uid, err := strconv.ParseUint(u.Uid, 10, 32)
-	if err != nil {
-		return fmt.Errorf("error converting UID %q to uint32: %v", err)
-	}
-	gid, err := strconv.ParseUint(u.Gid, 10, 32)
-	if err != nil {
-		return fmt.Errorf("error converting UID %q to uint32: %v", err)
+		return fmt.Errorf("error determining user: %v", err)
 	}
 
 	spec := &specs.Spec{
@@ -108,13 +127,13 @@ func run() error {
 			Env: []string{
 				"HOME=/",
 				"PATH=/usr/local/bin:/usr/bin:/bin",
-				"USER=" + u.Username,
+				"USER=" + username,
 			},
 			Cwd: wd,
 			User: specs.User{
-				UID:      uint32(uid),
-				GID:      uint32(gid),
-				Username: u.Username,
+				UID:      uid,
+				GID:      gid,
+				Username: username,
 			},
 			Capabilities: nil, // none!
 		},
@@ -157,8 +176,23 @@ func run() error {
 		return fmt.Errorf("error writing config.json: %v", err)
 	}
 
-	// runsc must run as root.
-	cmd := exec.Command("sudo", *runscBin)
+	// sudo lowers RLIMIT_NOFILE to 1024 by default, which runsc and the
+	// sandboxed application will inherit. Raise it back up to a more
+	// reasonable level.
+	const fileLimit = 32768
+	var limit syscall.Rlimit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
+		return fmt.Errorf("error getting rlimit: %v", err)
+	}
+	if limit.Max < fileLimit {
+		return fmt.Errorf("file limit too low: %+v", limit)
+	}
+	limit.Cur = fileLimit
+	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
+		return fmt.Errorf("error setting rlimit: %v", err)
+	}
+
+	cmd := exec.Command(*runscBin)
 	// Write to in-memory overlayfs, not host.
 	cmd.Args = append(cmd.Args, "--overlay")
 	// No networking.
