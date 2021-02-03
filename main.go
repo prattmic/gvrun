@@ -139,7 +139,7 @@ func run() error {
 		},
 		Hostname: "runsc-gvrun",
 		Root: &specs.Root{
-			Path: dir,
+			Path: rootPath,
 		},
 		Mounts: []specs.Mount{
 			// Grant access to the binary and working directory.
