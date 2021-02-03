@@ -25,11 +25,16 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-var runscBin = flag.String("runsc", "", "Path to runsc binary")
+var (
+	runscBin = flag.String("runsc", "", "Path to runsc binary")
+
+	extraDirs = flag.String("extra_dirs", "", "Comma-separated list of extra directories to provide read-only access to")
+)
 
 func run() error {
 	// We need a temporary directory for two reasons:
@@ -130,6 +135,14 @@ func run() error {
 			resolvedMount("/usr/grte/v4/lib64/libc.so.6"),            // libc.
 			resolvedMount("/usr/grte/v4/lib64/libpthread.so.0"),      // libpthread.
 		},
+	}
+
+	if *extraDirs != "" {
+		dirs := strings.Split(*extraDirs, ",")
+		for _, d := range dirs {
+			log.Printf("Granting read access to %q", d)
+			spec.Mounts = append(spec.Mounts, resolvedMount(d))
+		}
 	}
 
 	if err := json.NewEncoder(specFile).Encode(spec); err != nil {
