@@ -5,8 +5,9 @@ that allows simple sandboxing of local workloads without a container image.
 
 `gvrun` is intended only for running very simple workloads. Workloads running in
 `gvrun` are given access only to the binary itself, the current working
-directory, and a few critical system libraries (like libc). As a result, many
-workloads will not work out-of-the-box with `gvrun`.
+directory, and a few critical system libraries (like libc). As a result, **many
+workloads will not work out-of-the-box with `gvrun`**. More complex workloads
+are likely better off running in a Docker container with `runsc`.
 
 Workloads have no host filesystem write access (all writes are in-memory only)
 and no network access.
